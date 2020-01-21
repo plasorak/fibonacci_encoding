@@ -9,16 +9,20 @@
 #include "TMath.h"
 #include "TPad.h"
 #include "TCanvas.h"
+#include "Timing.hpp"
 #include "TH1D.h"
 #include "TInterpreter.h"
 #include <vector>
 #include <numeric>
 #include <iostream>
+#include <gperftools/profiler.h>
 #endif
 
 std::map<int, size_t> FibNumbers;
-
-
+TH1D* timing = nullptr;
+TH1D* diff_histo = nullptr;
+bool standard_fibonacci;
+   
 // template<typename T>
 // std::vector<bool> EncodeToBool(T number) {
 //   std::vector<bool> encoded;
@@ -46,10 +50,20 @@ std::map<int, size_t> FibNumbers;
 
 //   return r;
 // }
+inline void add_to_sequence_terminate(std::vector<bool> array, std::vector<bool> sqce, std::vector<bool>& cmp) {
+  if (sqce.size()) {
+    std::copy(array.begin(), array.end(), sqce.begin());
+    cmp.insert(cmp.end(), sqce.begin(), sqce.end());
+  } else {
+    cmp.insert(cmp.end(), array.begin(), array.end());
+  }
+  cmp.push_back(1);
+}
 
 std::vector<short> CompressThis(const std::vector<short> wf, bool verb=false) {
-
+  // ProfilerStart("prof.out");
   // The format it has to be in the end
+  MeasureTimeFrom();
   std::vector<short> comp_short;
   // First number is not encoded (baseline)
   if (wf.size() > std::numeric_limits<short>::max()) {
@@ -63,7 +77,8 @@ std::vector<short> CompressThis(const std::vector<short> wf, bool verb=false) {
   comp_short.push_back(*wf.begin());
 
   // The format we are working with
-  std::vector<bool> comp;
+  //std::vector<bool> comp;
+  std::vector<bool> cmp;
 
   // The input is changed to be the difference between ticks
   std::vector<short> diff;
@@ -72,8 +87,11 @@ std::vector<short> CompressThis(const std::vector<short> wf, bool verb=false) {
 
   // Start from 1 to avoid the first number
   for (size_t iSample=1; iSample<diff.size(); ++iSample) {
-    short d = diff[iSample];
+    // std::cout << "iSample : " << iSample << "\n";
 
+    //for (size_t iSample=0; iSample<31; ++iSample) {
+    short d = diff[iSample];
+    diff_histo->Fill(d);
     // Store that for posterity and checks
     const short d_orig_nozigzag = d;
 
@@ -86,114 +104,103 @@ std::vector<short> CompressThis(const std::vector<short> wf, bool verb=false) {
     const short d_orig = d;
 
     // This vector stores the indices of Fibonacci number used
-    std::vector<int> fib_sequence;
-
+    //std::vector<int> fib_sequence;
+    std::vector<bool> sqce;
+    
     while (true) {
       short max_fib = 0;
-      size_t iFib=0;
+      size_t iFib=1;
 
-      if (d == 1) {
-        fib_sequence.push_back(1);
-        break;
-      } else if (d == 0) {
+      if (d==0) {
+        cmp.insert(cmp.end(), sqce.begin(), sqce.end());
+        cmp.push_back(1);
         break;
       }
 
+      if (standard_fibonacci) {
+        if      (d==1 ) {add_to_sequence_terminate({1            }, sqce, cmp); break;}
+        else if (d==2 ) {add_to_sequence_terminate({0,1          }, sqce, cmp); break;}
+        else if (d==3 ) {add_to_sequence_terminate({0,0,1        }, sqce, cmp); break;}
+        else if (d==4 ) {add_to_sequence_terminate({1,0,1        }, sqce, cmp); break;}
+        else if (d==5 ) {add_to_sequence_terminate({0,0,0,1      }, sqce, cmp); break;}
+        else if (d==6 ) {add_to_sequence_terminate({1,0,0,1      }, sqce, cmp); break;}
+        else if (d==7 ) {add_to_sequence_terminate({0,1,0,1      }, sqce, cmp); break;}
+        else if (d==8 ) {add_to_sequence_terminate({0,0,0,0,1    }, sqce, cmp); break;}
+        else if (d==9 ) {add_to_sequence_terminate({1,0,0,0,1    }, sqce, cmp); break;}
+        else if (d==10) {add_to_sequence_terminate({0,1,0,0,1    }, sqce, cmp); break;}
+        else if (d==11) {add_to_sequence_terminate({0,0,1,0,1    }, sqce, cmp); break;}
+        else if (d==12) {add_to_sequence_terminate({1,0,1,0,1    }, sqce, cmp); break;}
+        else if (d==13) {add_to_sequence_terminate({0,0,0,0,0,1  }, sqce, cmp); break;}
+        else if (d==14) {add_to_sequence_terminate({1,0,0,0,0,1  }, sqce, cmp); break;}
+        else if (d==15) {add_to_sequence_terminate({0,1,0,0,0,1  }, sqce, cmp); break;}
+        else if (d==16) {add_to_sequence_terminate({0,0,1,0,0,1  }, sqce, cmp); break;}
+        else if (d==17) {add_to_sequence_terminate({1,0,1,0,0,1  }, sqce, cmp); break;}
+        else if (d==18) {add_to_sequence_terminate({0,0,0,1,0,1  }, sqce, cmp); break;}
+        else if (d==19) {add_to_sequence_terminate({1,0,0,1,0,1  }, sqce, cmp); break;}
+        else if (d==20) {add_to_sequence_terminate({0,1,0,1,0,1  }, sqce, cmp); break;}
+        else if (d==21) {add_to_sequence_terminate({0,0,0,0,0,0,1}, sqce, cmp); break;}
+        else if (d==22) {add_to_sequence_terminate({1,0,0,0,0,0,1}, sqce, cmp); break;}
+        else if (d==23) {add_to_sequence_terminate({0,1,0,0,0,0,1}, sqce, cmp); break;}
+        else if (d==24) {add_to_sequence_terminate({0,0,1,0,0,0,1}, sqce, cmp); break;}
+        else if (d==25) {add_to_sequence_terminate({1,0,1,0,0,0,1}, sqce, cmp); break;}
+        else if (d==26) {add_to_sequence_terminate({0,0,0,1,0,0,1}, sqce, cmp); break;}
+        else if (d==27) {add_to_sequence_terminate({1,0,0,1,0,0,1}, sqce, cmp); break;}
+        else if (d==28) {add_to_sequence_terminate({0,1,0,1,0,0,1}, sqce, cmp); break;}
+        else if (d==29) {add_to_sequence_terminate({0,0,0,0,1,0,1}, sqce, cmp); break;}
+        else if (d==30) {add_to_sequence_terminate({1,0,0,0,1,0,1}, sqce, cmp); break;}
+        else if (d==31) {add_to_sequence_terminate({0,1,0,0,1,0,1}, sqce, cmp); break;}
+      }
+      
       // Find the first Fibonacci number that exceed the number
       for (; iFib<FibNumbers.size(); ++iFib) {
-        if ((size_t)d < FibNumbers[iFib]) {
+        if ((size_t)d < FibNumbers.at(iFib)) {
           break;
         }
       }
-      // And remove it from the initial number
-      d = d - FibNumbers[iFib-1];
+
+      // And subtract the previous one from the initial number
+      d = d - FibNumbers.at(iFib-1);
       // Store the previous Fibonacci number
-      fib_sequence.push_back(iFib-1);
-
-      // And continue until you get 0 or 1
-    }
-
-    short sum=0;
-    std::vector<bool> including;
-
-    // Little cross check
-    for (size_t it=0; it<fib_sequence.size(); ++it) {
-      // std::cout << "Fibonacci number index: " << fib_sequence[it] << " (which is equal to " << FibNumbers[fib_sequence[it]] << ")\n";
-      sum += FibNumbers[fib_sequence[it]];
-    }
-
-    // fib_sequence are in decreasing order
-    // Go from 0 to the last number and check for each of them if the number is in the sequence
-    for (int it=1; it<=(*fib_sequence.begin()); ++it) {
-      auto found = std::find(fib_sequence.begin(),fib_sequence.end(),it);
-      // If it is, store a 1
-      if (found != fib_sequence.end()) {
-        including.push_back(1);
-        comp.push_back(1);
-      // If it isn't, store a 0
+      if (!sqce.size()) {
+        sqce = std::vector<bool>(iFib-1,0);
+        sqce.at(iFib-2) = 1;
       } else {
-        including.push_back(0);
-        comp.push_back(0);
+        sqce.at(iFib-2) = 1;
       }
-    }
-    // Always add a 1 at the end.
-    including.push_back(1);
-    comp.push_back(1);
-    if (verb) {
-      std::cout << d_orig_nozigzag << "\t-> zigzag version: " << d_orig << "\t-> encoded version: " << including.size() << " bits [ ";
-      for (size_t it=0; it<including.size(); ++it)
-        std::cout << including[it] << " ";
-      std::cout << "]\n";
-    }
-    // Some cross-checks
-    if (sum != d_orig) {
-      std::cerr << "#$%*#J@@$(S!!!\n";
-      std::cerr << "diff[" << iSample << "]: " << diff[iSample] << "\t";
-      std::cerr << "d: " << d_orig << "\n";
-      std::cerr << "fib sequence size : " << fib_sequence.size() << "\n";
-      short sum=0;
-      for (size_t it=0; it<fib_sequence.size(); ++it) {
-        std::cerr << fib_sequence[it] << " -> " << FibNumbers[fib_sequence[it]] << "\n";
-      }
-      throw;
     }
   }
-
+  
   // Now convert all this to a vector of short and it's just another day in paradise for larsoft
-  size_t n_vector = comp.size();
+  size_t n_vector = cmp.size();
   while (n_vector>sizeof(short)*8) {
     // Create a bitset of the size of the short to simplify things
     std::bitset<8*sizeof(short)> this_encoded;
     // Set the bitset to match the stream
     if (verb) std::cout <<"[ ";
     for (size_t it=0; it<8*sizeof(short); ++it) {
-      if (comp[it]) this_encoded.set(it);
-      if (verb) std::cout << comp[it] << " ";
+      if (cmp[it]) this_encoded.set(it);
+      if (verb) std::cout << cmp[it] << " ";
     }
     if (verb) std::cout <<"]\n";
     // Get rid of stuff we've dealt with 
-    comp.erase(comp.begin(), comp.begin()+8*sizeof(short));
+    cmp.erase(cmp.begin(), cmp.begin()+8*sizeof(short));
     // Cast the bitset to short
     short comp_s = (short)this_encoded.to_ulong();
     
     // Store the short in the output waveform
     comp_short.push_back(comp_s);
-    n_vector = comp.size();
+    n_vector = cmp.size();
   }
   
   // Deal with the last part
   std::bitset<8*sizeof(short)> this_encoded;
-  for (size_t it=0; it<comp.size(); ++it) {
-    if(comp[it]) this_encoded.set(it);
+  for (size_t it=0; it<cmp.size(); ++it) {
+    if(cmp[it]) this_encoded.set(it);
   }
   short comp_s = (short)this_encoded.to_ulong();
   comp_short.push_back(comp_s);
-  // std::cout << "yay\n";
-  // std::cout << "Printing comp_short size: " << comp_short.size() << "\n";
-  // for (size_t it=0; it<comp_short.size(); ++it) 
-  //   std::cout << "comp_short[" << it << "] = " << comp_short[it] << "\n";
-  // std::cout << "Done\n";
 
+  timing->Fill(MeasureMicroSecondTime());
   return comp_short;
 }
 
@@ -269,7 +276,8 @@ int Compress()
   t->SetBranchAddress("waveforms", &waveforms);
   t->SetBranchAddress("chans",  &channels);
   t->GetEntry(0);
-  
+  timing= new TH1D("timing", ";time ns", 60, 0, 30000);
+  diff_histo = new TH1D("difgf", ";diff", 50, -25, 25);
   FibNumbers[0] = 1;
   FibNumbers[1] = 1;
   for (int i=2; i<25; ++i) {
@@ -277,6 +285,7 @@ int Compress()
   }
   FibNumbers.erase(0);
   // FibNumbers[0] = 0;
+  standard_fibonacci = true;
   
   // std::cout << "Printing FibNumbers size: " << FibNumbers.size() << "\n";
   // for (auto const & it: FibNumbers)
@@ -287,58 +296,63 @@ int Compress()
   TH1D* original_decode  = new TH1D("diff", "Original-Decoded;Original-Decode(Encoded);N ticks", 20, -20, 20);
   TH1D* compression_fact = new TH1D("Compression_Factor", "Original size / encoded size;Original size/Encoded size;N waveforms (2.2 ms)", 200, 0, 5);
   
-  for (int i=0; i<waveforms->size(); ++i) {
-    // for (int i=0; i<20; ++i) {
-     if (i%100==0) {
-       double progress = 100. * i / waveforms->size();
-       std::cout << "progress: " << progress << "%\n";
-       // if (progress > 1) break;
-     }
+  for (int i=0; i<waveforms->size()/100; ++i) {
+  // for (int i=0; i<100; ++i) {
+
+    if (i%100==0) {
+      double progress = 100. * i / waveforms->size();
+      std::cout << "progress: " << progress << "%\n";
+      // if (progress > 1) break;
+    }
     std::vector<short> wf;
     wf.reserve((*waveforms)[i].size());
     size_t size=0;
     for (auto const& adc: (*waveforms)[i]) {
+      if (size++>1000000) break;
       wf.push_back(adc);
-      if (size++>5000000) break;
     }
-    
+    //timing->Fill();
     // std::vector<short> compressed = CompressThis(wf, i==9);
     // std::vector<short>  uncompressed = UncompressThis(compressed, i==9);
     std::vector<short> compressed = CompressThis(wf);
-    std::vector<short>  uncompressed = UncompressThis(compressed);
+    // std::vector<short>  uncompressed = UncompressThis(compressed);
 
-    for (size_t it=0; it<wf.size(); ++it) {
-      double diff = wf[it] - uncompressed[it];
-      if (diff != 0) {
-        std::cout << "i " << i << "\n";
-        std::cout << "it : " << it << "\n";
-        std::cout << "wf[it] : " << wf[it] << "\n";
-        std::cout << "uncompressed[it] : " << uncompressed[it] << "\n";
-        std::cout << "Printing compressed size: " << compressed.size() << "\n";
-        for (size_t it=0; it<4; ++it)
-          std::cout << "compressed[" << it << "] = " << compressed[it] << "\n";
-        std::cout << "Done\n";
+    // for (size_t it=0; it<wf.size(); ++it) {
+    //   double diff = wf[it] - uncompressed[it];
+    //   if (diff != 0) {
+    //     std::cout << "\n\n\ni " << i << "\n";
+    //     std::cout << "it : " << it << "\n";
+    //     std::cout << "wf[it] : " << wf[it] << "\n";
+    //     std::cout << "uncompressed[it] : " << uncompressed[it] << "\n";
+    //     std::cout << "Printing compressed size: " << compressed.size() << "\n";
+    //     for (size_t it=0; it<4; ++it)
+    //       std::cout << "compressed[" << it << "] = " << compressed[it] << "\n";
+    //     std::cout << "Done\n";
 
-        throw;
-      }
+    //     throw;
+    //   }
       
-      if (diff > 20) diff = 19;
-      else if (diff < -20) diff=-19;
-      original_decode->Fill(diff);
-    }
+    //   if      (diff >  20) diff =  19;
+    //   else if (diff < -20) diff = -19;
+    //   original_decode->Fill(diff);
+    // }
 
     compression_fact->Fill((double)wf.size()/compressed.size());
   }
 
   TCanvas c;
   c.Print("compression.pdf[");
-  gPad->SetLogy(1);
-  original_decode->SetStats(0);
-  original_decode->SetMinimum(0.1);
-  original_decode->Draw();
+  // gPad->SetLogy(1);
+  // original_decode->SetStats(0);
+  // original_decode->SetMinimum(0.1);
+  // original_decode->Draw();
+  // c.Print("compression.pdf");
+  // gPad->SetLogy(0);
+  // compression_fact->Draw();
+  // c.Print("compression.pdf");
+  timing->Draw();
   c.Print("compression.pdf");
-  gPad->SetLogy(0);
-  compression_fact->Draw();
+  diff_histo->Draw();
   c.Print("compression.pdf");
   c.Print("compression.pdf]");
   
